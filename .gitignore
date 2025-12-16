@@ -1,0 +1,33 @@
+# Node
+node_modules/
+
+# Build outputs
+dist/
+build/
+release/
+win-unpacked/
+
+# Electron
+*.asar
+*.exe
+*.pdb
+*.dll
+resources/*.pak
+
+# Logs
+*.log
+pack-log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Package manager
+package-lock.json
+
+# Misc
+.env
