@@ -1,0 +1,7 @@
+[Unicode]
+Unicode=yes
+[Version]
+signature = "$CHICAGO$"
+Revision = 1
+[Privilege Rights]
+SeCreateSymbolicLinkPrivilege = *S-1-5-32-544,S-1-5-21-3836586582-2431188049-116263462-1001
