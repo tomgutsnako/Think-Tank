@@ -2,7 +2,7 @@
 
 Short project README: build and packaging notes for local development.
 
-## Getting started — Development ✅
+## Getting started  Development
 
 Follow these steps to run the app locally for development (fast edit-refresh cycle):
 
@@ -64,7 +64,7 @@ The helper script enables the built-in Administrator, runs the pack, captures a 
 - Pack log (Admin run): `pack-log-admin.txt`
 - Output folder (portable/unpacked app): `release\win-unpacked`
 
-### Installing & unpacking the app (Windows) ✅
+### Installing & unpacking the app (Windows) 
 
 Options to get and run the app:
 
