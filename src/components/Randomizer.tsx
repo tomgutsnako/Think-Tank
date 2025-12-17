@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Class, Student, Session, ParticipationRecord } from '../types';
+import { Class, Student, Session, ParticipationRecord, Question } from '../types';
 import { storage } from '../utils/storage';
 import { getWeightedRandomStudent, calculateStudentAnalytics } from '../utils/analytics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -8,10 +8,15 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { ArrowLeft, Play, Pause, StopCircle, User, Check, X, Minus, RotateCcw, Hand, Search, Grid3x3, Disc } from 'lucide-react';
+import { ArrowLeft, Play, Pause, StopCircle, User, Check, X, Minus, RotateCcw, Hand, Search, Grid3x3, Disc, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Motion aliases to satisfy TypeScript when using className
+const MotionDiv: any = motion.div;
+const MotionSpan: any = motion.span;
 import { toast } from 'sonner';
 import { CardRandomizer } from './CardRandomizer';
+import NameScroller from './NameScroller';
 
 interface RandomizerProps {
   classId: string;
@@ -33,8 +38,36 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [randomizerMode, setRandomizerMode] = useState<'spinner' | 'cards'>('spinner');
 
+  // Question integration
+  const [questionFlow, setQuestionFlow] = useState<'student-first' | 'question-first'>('student-first');
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+
+  // Scroller integration
+  const [pendingStudent, setPendingStudent] = useState<Student | null>(null);
+  const [scrollerFinalIndex, setScrollerFinalIndex] = useState<number | null>(null);
+  const [scrollerKey, setScrollerKey] = useState<number>(0);
+  const [scrollerSpins, setScrollerSpins] = useState<number>(6);
+
   useEffect(() => {
     loadData();
+
+    const handler = () => loadData();
+    window.addEventListener('session-updated', handler);
+
+    const qHandler = (e: any) => {
+      const q = e?.detail as Question | undefined;
+      if (q) {
+        setSelectedQuestion(q);
+        toast.success('Question selected');
+      }
+    };
+
+    window.addEventListener('question-selected', qHandler as EventListener);
+
+    return () => {
+      window.removeEventListener('session-updated', handler);
+      window.removeEventListener('question-selected', qHandler as EventListener);
+    };
   }, [classId]);
 
   const loadData = () => {
@@ -71,37 +104,58 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
     setSession(newSession);
     setShowStartDialog(false);
     toast.success('Session started');
+    window.dispatchEvent(new CustomEvent('session-updated'));
   };
 
   const handlePickStudent = () => {
     if (!session || isSpinning) return;
-    
-    setIsSpinning(true);
-    
-    // Determine which students to exclude
-    const excludeIds = avoidRepetition ? calledStudents : [];
-    
-    // Simulate spinning animation
-    let count = 0;
-    const spinInterval = setInterval(() => {
-      const randomStudent = students[Math.floor(Math.random() * students.length)];
-      setSelectedStudent(randomStudent);
-      count++;
-      
-      if (count >= 20) {
-        clearInterval(spinInterval);
-        // Select final student with weighted randomness
-        const finalStudent = getWeightedRandomStudent(students, session.id, excludeIds);
-        if (finalStudent) {
-          setSelectedStudent(finalStudent);
-          setShowResponseDialog(true);
-        }
-        setIsSpinning(false);
+
+    // If we're in question-first mode and no question is selected, pick a question first
+    if (questionFlow === 'question-first' && !selectedQuestion) {
+      const qs = storage.getQuestions(classId);
+      if (qs.length === 0) {
+        toast.error('No questions available for this class');
+        return;
       }
-    }, 100);
+      const q = qs[Math.floor(Math.random() * qs.length)];
+      setSelectedQuestion(q);
+      toast.success('Question chosen');
+      // Brief pause so teacher can see the question, then pick student
+      setTimeout(() => startSpin(), 700);
+      return;
+    }
+
+    startSpin();
   };
 
-  const handleRecordResponse = (responseType: 'correct' | 'incorrect' | 'partial' | 'no-answer') => {
+  const startSpin = () => {
+    if (!session) return;
+
+    // Determine which students to exclude
+    const excludeIds = avoidRepetition ? calledStudents : [];
+
+    // Select final student with weighted randomness now
+    const finalStudent = getWeightedRandomStudent(students, session.id, excludeIds);
+    if (!finalStudent) {
+      toast.error('No available students to pick');
+      return;
+    }
+
+    const finalIndex = students.findIndex(s => s.id === finalStudent.id);
+    if (finalIndex === -1) {
+      toast.error('Selected student not found');
+      return;
+    }
+
+    // Prepare scroller
+    setPendingStudent(finalStudent);
+    setScrollerFinalIndex(finalIndex);
+    setScrollerSpins(4 + Math.floor(Math.random() * 4)); // 4-7 spins
+    setScrollerKey(k => k + 1);
+    setIsSpinning(true);
+  };
+
+  const handleRecordResponse = (responseType: 'correct' | 'incorrect' | 'partial' | 'no-answer' | 'absent') => {
     if (!session || !selectedStudent) return;
     
     const record: ParticipationRecord = {
@@ -115,17 +169,19 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
     storage.saveParticipationRecord(record);
     setCalledStudents([...calledStudents, selectedStudent.id]);
     setShowResponseDialog(false);
+    setSelectedQuestion(null);
     toast.success('Response recorded');
   };
 
   const handleTogglePause = () => {
     if (!session) return;
     
-    const newStatus = session.status === 'active' ? 'paused' : 'active';
-    const updatedSession = { ...session, status: newStatus };
+    const newStatus: Session['status'] = session.status === 'active' ? 'paused' : 'active';
+    const updatedSession: Session = { ...session, status: newStatus };
     storage.saveSession(updatedSession);
     setSession(updatedSession);
     toast.success(newStatus === 'paused' ? 'Session paused' : 'Session resumed');
+    window.dispatchEvent(new CustomEvent('session-updated'));
   };
 
   const handleEndSession = () => {
@@ -138,6 +194,7 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
     };
     storage.saveSession(updatedSession);
     toast.success('Session ended');
+    window.dispatchEvent(new CustomEvent('session-updated'));
     onBack();
   };
 
@@ -204,6 +261,11 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
           <DialogHeader>
             <DialogTitle>Record Response</DialogTitle>
             <DialogDescription>
+              {selectedQuestion && (
+                <div className="mb-2">
+                  <strong>Question:</strong> {selectedQuestion.text}
+                </div>
+              )}
               How did {selectedStudent?.name} respond?
             </DialogDescription>
           </DialogHeader>
@@ -235,6 +297,13 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
             >
               <User className="w-6 h-6 mr-2" />
               No Answer
+            </Button>
+            <Button
+              onClick={() => handleRecordResponse('absent')}
+              className="h-20 bg-neutral-700 hover:bg-neutral-800 col-span-2"
+            >
+              <Hand className="w-6 h-6 mr-2" />
+              Absent
             </Button>
           </div>
         </DialogContent>
@@ -372,6 +441,24 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
                     Card Mode
                   </Button>
                 </div>
+
+                {/* Question Flow Toggle */}
+                <div className="flex gap-2 mt-3 items-center">
+                  <div className="flex gap-2">
+                    <Button size="sm" variant={questionFlow === 'student-first' ? 'default' : 'outline'} onClick={() => setQuestionFlow('student-first')}>
+                      Student First
+                    </Button>
+                    <Button size="sm" variant={questionFlow === 'question-first' ? 'default' : 'outline'} onClick={() => setQuestionFlow('question-first')}>
+                      Question First
+                    </Button>
+                  </div>
+                  <div className="ml-4">
+                    <Button size="sm" variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('open-question-dialog'))}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Question
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 {randomizerMode === 'spinner' ? (
@@ -379,8 +466,28 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
                     {/* Student Display */}
                     <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl p-12 min-h-[300px] flex items-center justify-center">
                       <AnimatePresence mode="wait">
-                        {selectedStudent ? (
-                          <motion.div
+                        {isSpinning ? (
+                          <div key={"name-scroller"} className="w-full">
+                            <NameScroller
+                              key={scrollerKey}
+                              students={students}
+                              finalIndex={scrollerFinalIndex ?? 0}
+                              spins={scrollerSpins}
+                              itemHeight={64}
+                              visibleCount={3}
+                              onComplete={() => {
+                                setIsSpinning(false);
+                                if (pendingStudent) {
+                                  setSelectedStudent(pendingStudent);
+                                  setPendingStudent(null);
+                                  setShowResponseDialog(true);
+                                }
+                                window.dispatchEvent(new CustomEvent('session-updated'));
+                              }}
+                            />
+                          </div>
+                        ) : selectedStudent ? (
+                          <MotionDiv
                             key={selectedStudent.id}
                             initial={{ scale: 0, rotate: -180 }}
                             animate={{ scale: 1, rotate: 0 }}
@@ -396,16 +503,16 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
                             {selectedStudent.groupAssignment && (
                               <Badge className="mt-2">{selectedStudent.groupAssignment}</Badge>
                             )}
-                          </motion.div>
+                          </MotionDiv>
                         ) : (
-                          <motion.div
+                          <MotionDiv
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             className="text-center text-white"
                           >
                             <User className="w-16 h-16 mx-auto mb-4 opacity-50" />
                             <p className="text-xl">Click "Random Pick" to begin</p>
-                          </motion.div>
+                          </MotionDiv>
                         )}
                       </AnimatePresence>
                     </div>
@@ -419,12 +526,12 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
                           className="h-14 text-lg"
                         >
                           {isSpinning ? (
-                            <motion.div
+                            <MotionDiv
                               animate={{ rotate: 360 }}
                               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                             >
                               <RotateCcw className="w-5 h-5 mr-2" />
-                            </motion.div>
+                            </MotionDiv>
                           ) : (
                             <Play className="w-5 h-5 mr-2" />
                           )}

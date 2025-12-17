@@ -22,6 +22,9 @@ export function StudentDashboard({ studentId, classId, onLogout }: StudentDashbo
 
   useEffect(() => {
     loadData();
+    const handler = () => loadData();
+    window.addEventListener('session-updated', handler);
+    return () => window.removeEventListener('session-updated', handler);
   }, [studentId, classId]);
 
   const loadData = () => {

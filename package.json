@@ -47,6 +47,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.19",
     "electron": "^39.2.7",

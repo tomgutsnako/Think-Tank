@@ -197,4 +197,27 @@ export const storage = {
     const classes = storage.getClasses();
     return classes.find(c => c.inviteCode === inviteCode) || null;
   },
+  // Question operations
+  getQuestions: (classId?: string) => {
+    const data = localStorage.getItem('thinktank_questions');
+    const questions = data ? JSON.parse(data) : [];
+    return classId ? questions.filter((q: any) => q.classId === classId) : questions;
+  },
+
+  getQuestionsByTopic: (classId: string | undefined, topic: string) => {
+    const all = storage.getQuestions(classId);
+    return all.filter((q: any) => q.topic.toLowerCase() === topic.toLowerCase());
+  },
+
+  saveQuestion: (question: { id: string; classId?: string; topic: string; text: string; createdAt: string }) => {
+    const all = storage.getQuestions();
+    all.push(question);
+    localStorage.setItem('thinktank_questions', JSON.stringify(all));
+  },
+
+  deleteQuestion: (id: string) => {
+    const all = storage.getQuestions();
+    const filtered = all.filter((q: any) => q.id !== id);
+    localStorage.setItem('thinktank_questions', JSON.stringify(filtered));
+  },
 };

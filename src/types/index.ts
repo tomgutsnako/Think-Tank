@@ -41,7 +41,7 @@ export interface ParticipationRecord {
   id: string;
   sessionId: string;
   studentId: string;
-  responseType: 'correct' | 'incorrect' | 'partial' | 'no-answer';
+  responseType: 'correct' | 'incorrect' | 'partial' | 'no-answer' | 'absent';
   timestamp: string;
   notes?: string;
 }
@@ -72,4 +72,12 @@ export interface Badge {
   icon: string;
   requirement: string;
   earnedDate?: string;
+}
+
+export interface Question {
+  id: string;
+  classId?: string;
+  topic: string;
+  text: string;
+  createdAt: string;
 }

@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Student } from '../types';
+import { Student, Question } from '../types';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { motion } from 'framer-motion';
-import { Shuffle, RotateCcw, Sparkles } from 'lucide-react';
+
+// Motion aliases for TypeScript className compatibility
+const MotionDiv: any = motion.div;
+const MotionSpan: any = motion.span;
+import { Shuffle, RotateCcw, Sparkles, Trash2, Plus } from 'lucide-react';
+import { storage } from '../utils/storage';
+import { toast } from 'sonner';
+import { Textarea } from './ui/textarea';
 
 interface CardData {
   id: string;
@@ -46,6 +53,52 @@ export function CardRandomizer({ students, onStudentRevealed, isSessionActive }:
   useEffect(() => {
     initializeCards();
   }, [students]);
+
+  // Questions state and handlers
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [showQuestionDialog, setShowQuestionDialog] = useState(false);
+  const [newQuestionTopic, setNewQuestionTopic] = useState('');
+  const [newQuestionText, setNewQuestionText] = useState('');
+
+  useEffect(() => {
+    loadQuestions();
+    const openHandler = () => setShowQuestionDialog(true);
+    window.addEventListener('open-question-dialog', openHandler);
+    return () => window.removeEventListener('open-question-dialog', openHandler);
+  }, []);
+
+  const loadQuestions = () => {
+    const qs = storage.getQuestions();
+    setQuestions(qs);
+  };
+
+  const handleSaveQuestion = () => {
+    const topic = newQuestionTopic.trim();
+    const text = newQuestionText.trim();
+    if (!text) {
+      toast.error('Question text cannot be empty');
+      return;
+    }
+    const q = { id: crypto.randomUUID(), topic: topic || 'General', text, createdAt: new Date().toISOString() };
+    storage.saveQuestion(q);
+    toast.success('Question saved');
+    setNewQuestionTopic('');
+    setNewQuestionText('');
+    setShowQuestionDialog(false);
+    loadQuestions();
+  };
+
+  const handleDeleteQuestion = (id: string) => {
+    storage.deleteQuestion(id);
+    toast.success('Question deleted');
+    loadQuestions();
+  };
+
+  const handleUseQuestion = (q: Question) => {
+    const ev = new CustomEvent('question-selected', { detail: q });
+    window.dispatchEvent(ev);
+    toast.success('Question selected');
+  };
 
   const initializeCards = () => {
     const shuffledStudents = shuffleArray(students);
@@ -159,10 +212,43 @@ export function CardRandomizer({ students, onStudentRevealed, isSessionActive }:
         </DialogContent>
       </Dialog>
 
+      {/* Add Question Dialog */}
+      <Dialog open={showQuestionDialog} onOpenChange={setShowQuestionDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Question</DialogTitle>
+            <DialogDescription>
+              Save a question to be used during randomization
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="qTopic">Topic</Label>
+              <Input id="qTopic" value={newQuestionTopic} onChange={(e)=>setNewQuestionTopic(e.target.value)} placeholder="Optional topic (e.g., Algebra)" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="qText">Question</Label>
+              <Textarea id="qText" value={newQuestionText} onChange={(e)=>setNewQuestionText(e.target.value)} placeholder="Type the question..." />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleSaveQuestion} className="ml-auto">Save</Button>
+              <Button variant="outline" onClick={()=>setShowQuestionDialog(false)}>Cancel</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Controls */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={() => setShowQuestionDialog(true)}
+              variant="secondary"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Question
+            </Button>
             <Button
               onClick={() => setShowBatchDialog(true)}
               disabled={!isSessionActive || unrevealedCount === 0}
@@ -202,7 +288,7 @@ export function CardRandomizer({ students, onStudentRevealed, isSessionActive }:
       {/* Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
         {cards.map((card) => (
-          <motion.div
+          <MotionDiv
             key={card.id}
             layout
             initial={{ opacity: 0, scale: 0.8 }}
@@ -214,7 +300,7 @@ export function CardRandomizer({ students, onStudentRevealed, isSessionActive }:
               disabled={!isSessionActive || card.isRevealed}
               className="w-full aspect-square perspective-1000"
             >
-              <motion.div
+              <MotionDiv
                 className="relative w-full h-full"
                 animate={{ rotateY: card.isRevealed ? 180 : 0 }}
                 transition={{ duration: 0.6 }}
@@ -233,12 +319,12 @@ export function CardRandomizer({ students, onStudentRevealed, isSessionActive }:
                   }}
                 >
                   {!card.isRevealed && (
-                    <motion.span
+                    <MotionSpan
                       animate={{ rotate: [0, 10, -10, 10, 0] }}
                       transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
                     >
                       {card.emoji}
-                    </motion.span>
+                    </MotionSpan>
                   )}
                 </div>
 
@@ -259,11 +345,39 @@ export function CardRandomizer({ students, onStudentRevealed, isSessionActive }:
                     {card.student.studentId}
                   </p>
                 </div>
-              </motion.div>
+              </MotionDiv>
             </button>
-          </motion.div>
+          </MotionDiv>
         ))}
       </div>
+
+      {/* Questions List */}
+      {questions.length > 0 && (
+        <Card>
+          <CardContent>
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Saved Questions</h3>
+              <div className="flex flex-col gap-2">
+                {questions.map(q => (
+                  <div key={q.id} className="flex items-start justify-between p-3 border rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold">{q.topic}</div>
+                      <div className="text-sm text-muted-foreground line-clamp-2">{q.text}</div>
+                      <div className="text-xs text-muted-foreground mt-1 font-mono">{new Date(q.createdAt).toLocaleString()}</div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <Button size="sm" variant="outline" onClick={() => handleUseQuestion(q)}>Use</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDeleteQuestion(q.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {cards.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
