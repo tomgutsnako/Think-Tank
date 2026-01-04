@@ -84,9 +84,10 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
       setSessionTopic(activeSession.topic);
       setShowStartDialog(false);
       
-      // Load already called students in this session
+      // Load already called students in this session (unique list)
       const records = storage.getParticipationRecords(activeSession.id);
-      setCalledStudents(records.map(r => r.studentId));
+      const uniqueIds = Array.from(new Set(records.map(r => r.studentId)));
+      setCalledStudents(uniqueIds);
     }
   };
 
@@ -167,7 +168,7 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
     };
     
     storage.saveParticipationRecord(record);
-    setCalledStudents([...calledStudents, selectedStudent.id]);
+    setCalledStudents(prev => Array.from(new Set([...prev, selectedStudent.id])));
     setShowResponseDialog(false);
     setSelectedQuestion(null);
     toast.success('Response recorded');
@@ -302,10 +303,21 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
             </Button>
             <Button
               onClick={() => handleRecordResponse('absent')}
-              className="h-20 bg-neutral-700 hover:bg-neutral-800 col-span-2"
+              className="h-20 bg-neutral-700 hover:bg-neutral-800 text-white font-semibold uppercase"
             >
-              <Hand className="w-6 h-6 mr-2" />
-              Absent
+              <Hand className="w-6 h-6 mr-2 text-white" />
+              ABSENT
+            </Button>
+          </div>
+
+          <div className="mt-3">
+            <Button
+              onClick={() => handleRecordResponse('absent')}
+              variant="outline"
+              className="w-full font-semibold uppercase"
+            >
+              <Hand className="w-4 h-4 mr-2" />
+              ABSENT
             </Button>
           </div>
         </DialogContent>
