@@ -58,6 +58,7 @@ export function StudentDashboard({ studentId, classId, onLogout }: StudentDashbo
   const partialAnswers = participationRecords.filter(r => r.responseType === 'partial').length;
   const incorrectAnswers = participationRecords.filter(r => r.responseType === 'incorrect').length;
   const noAnswers = participationRecords.filter(r => r.responseType === 'no-answer').length;
+  const absentAnswers = participationRecords.filter(r => r.responseType === 'absent').length;
   const accuracyRate = totalParticipations > 0 ? ((correctAnswers + partialAnswers * 0.5) / totalParticipations) * 100 : 0;
   const sessionsParticipated = new Set(participationRecords.map(r => r.sessionId)).size;
 
@@ -76,6 +77,7 @@ export function StudentDashboard({ studentId, classId, onLogout }: StudentDashbo
       case 'partial': return 'text-yellow-600 bg-yellow-50';
       case 'incorrect': return 'text-red-600 bg-red-50';
       case 'no-answer': return 'text-gray-600 bg-gray-50';
+      case 'absent': return 'text-neutral-700 bg-neutral-100';
       default: return 'text-gray-600 bg-gray-50';
     }
   };
@@ -86,6 +88,7 @@ export function StudentDashboard({ studentId, classId, onLogout }: StudentDashbo
       case 'partial': return 'Partial';
       case 'incorrect': return 'Incorrect';
       case 'no-answer': return 'No Answer';
+      case 'absent': return 'Absent';
       default: return type;
     }
   };
@@ -245,6 +248,19 @@ export function StudentDashboard({ studentId, classId, onLogout }: StudentDashbo
                     <div 
                       className="bg-gray-500 h-2 rounded-full" 
                       style={{ width: `${totalParticipations > 0 ? (noAnswers / totalParticipations) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm">Absent</span>
+                    <span className="text-sm">{absentAnswers}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-neutral-700 h-2 rounded-full" 
+                      style={{ width: `${totalParticipations > 0 ? (absentAnswers / totalParticipations) * 100 : 0}%` }}
                     />
                   </div>
                 </div>

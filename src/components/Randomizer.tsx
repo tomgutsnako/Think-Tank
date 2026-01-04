@@ -171,6 +171,8 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
     setShowResponseDialog(false);
     setSelectedQuestion(null);
     toast.success('Response recorded');
+    // Notify other components to reload data (e.g., StudentDashboard)
+    window.dispatchEvent(new CustomEvent('session-updated'));
   };
 
   const handleTogglePause = () => {
@@ -634,9 +636,16 @@ export function Randomizer({ classId, onBack }: RandomizerProps) {
                             <Badge variant={
                               record.responseType === 'correct' ? 'default' :
                               record.responseType === 'partial' ? 'secondary' :
+                              record.responseType === 'no-answer' ? 'outline' :
+                              record.responseType === 'absent' ? 'outline' :
                               'destructive'
                             }>
-                              {record.responseType}
+                              {record.responseType === 'correct' ? 'Correct' :
+                                record.responseType === 'partial' ? 'Partial' :
+                                record.responseType === 'incorrect' ? 'Incorrect' :
+                                record.responseType === 'no-answer' ? 'No Answer' :
+                                record.responseType === 'absent' ? 'Absent' :
+                                record.responseType}
                             </Badge>
                           </div>
                         );
