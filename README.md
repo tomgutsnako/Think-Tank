@@ -101,3 +101,21 @@ To avoid needing the helper script in the future, grant your user account the **
 - The helper script is intended as a safe, temporary workaround. Use the Local Security Policy GUI to apply a permanent fix if you prefer not to run packaging as Administrator.
 - Packaging logs and installer artifacts are kept in the `release/` directory.
 
+---
+
+## Offline Mode (new)
+
+The app supports an **Offline Mode** toggle so you can continue using core features when no network is available.
+
+- Toggle: Use the **Offline Mode / Online Mode** button in the header (next to Logout) to switch modes.
+- Behavior:
+  - When **Offline Mode** is enabled, the Service Worker will serve cached resources and the app will avoid network requests where possible.
+  - When **Online Mode** is enabled, the app uses the network-first strategy and updates cached assets when available.
+- How to test locally:
+  1. Start the app (dev server or packaged).
+  2. Click the **Offline Mode** button in the header to enable offline behavior.
+  3. Disable your network adapter or use the browser DevTools → Network → Offline.
+  4. Interact with the app; stored data (localStorage) will still be available and the Service Worker will serve cached assets.
+
+Notes: The offline toggle preference is saved in localStorage so it persists across reloads and is synchronized across open tabs.
+

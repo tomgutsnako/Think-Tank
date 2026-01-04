@@ -5,6 +5,7 @@ import { Student, ParticipationRecord, Session, Class } from '../types';
 import { storage } from '../utils/storage';
 import { calculateBadges, getBadgeProgress } from '../utils/badges';
 import { LogOut, Award, TrendingUp, Calendar, Target, BarChart3 } from 'lucide-react';
+import { OfflineToggle } from './OfflineToggle';
 
 interface StudentDashboardProps {
   studentId: string;
@@ -103,10 +104,13 @@ export function StudentDashboard({ studentId, classId, onLogout }: StudentDashbo
               <h1 className="text-gray-900">Think Tank</h1>
               <p className="text-sm text-muted-foreground">Student Dashboard</p>
             </div>
-            <Button variant="outline" onClick={onLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-3">
+              <OfflineToggle />
+              <Button variant="outline" onClick={onLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>

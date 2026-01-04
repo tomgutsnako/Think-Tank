@@ -10,6 +10,8 @@ const STORAGE_KEYS = {
   PARTICIPATION: 'thinktank_participation',
   STUDENT_ACCOUNTS: 'thinktank_student_accounts',
   STUDENT_REGISTRATIONS: 'thinktank_student_registrations',
+  OFFLINE_MODE: 'thinktank_offline_mode',
+  LAST_REGISTER: 'thinktank_last_registered',
 };
 
 export const storage = {
@@ -154,6 +156,30 @@ export const storage = {
     }
   },
 
+  // Offline mode preference
+  getOfflineMode: (): boolean => {
+    const v = localStorage.getItem(STORAGE_KEYS.OFFLINE_MODE);
+    return v === 'true';
+  },
+
+  setOfflineMode: (enabled: boolean) => {
+    localStorage.setItem(STORAGE_KEYS.OFFLINE_MODE, enabled ? 'true' : 'false');
+  },
+
+  // Last registered credentials (used to autofill / sign-in)
+  getLastRegistered: (): { studentId?: string; email?: string; password?: string } | null => {
+    const data = localStorage.getItem(STORAGE_KEYS.LAST_REGISTER);
+    return data ? JSON.parse(data) : null;
+  },
+
+  setLastRegistered: (payload: { studentId?: string; email?: string; password?: string } | null) => {
+    if (payload) {
+      localStorage.setItem(STORAGE_KEYS.LAST_REGISTER, JSON.stringify(payload));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.LAST_REGISTER);
+    }
+  },
+
   // Student account operations (for login)
   getStudentAccounts: (): Record<string, { password: string; studentId: string; classId: string }> => {
     const data = localStorage.getItem(STORAGE_KEYS.STUDENT_ACCOUNTS);
@@ -167,12 +193,12 @@ export const storage = {
   },
 
   // Student registration operations (self-signup)
-  getStudentRegistrations: (): Record<string, { id: string; name: string; email: string; password: string; classIds: string[] }> => {
+  getStudentRegistrations: (): Record<string, { id: string; name: string; email: string; studentId?: string; password: string; classIds: string[] }> => {
     const data = localStorage.getItem(STORAGE_KEYS.STUDENT_REGISTRATIONS);
     return data ? JSON.parse(data) : {};
   },
 
-  saveStudentRegistration: (email: string, registration: { id: string; name: string; email: string; password: string; classIds: string[] }) => {
+  saveStudentRegistration: (email: string, registration: { id: string; name: string; email: string; studentId?: string; password: string; classIds: string[] }) => {
     const registrations = storage.getStudentRegistrations();
     registrations[email] = registration;
     localStorage.setItem(STORAGE_KEYS.STUDENT_REGISTRATIONS, JSON.stringify(registrations));

@@ -81,3 +81,12 @@ export interface Question {
   text: string;
   createdAt: string;
 }
+
+export interface StudentRegistration {
+  id: string;
+  name: string;
+  email: string;
+  studentId?: string;
+  password: string;
+  classIds: string[];
+}

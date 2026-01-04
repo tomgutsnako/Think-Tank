@@ -45,15 +45,15 @@ export function JoinClass({ studentEmail, onJoinSuccess }: JoinClassProps) {
       return;
     }
 
-    // Generate student ID if not already set (use email prefix or provided student ID)
-    const studentIdPrefix = studentEmail.split('@')[0];
-    
+    // Use registration studentId if provided, otherwise use email prefix
+    const studentIdValue = (registration && (registration as any).studentId) ? (registration as any).studentId : studentEmail.split('@')[0];
+
     // Create student record for this class
     const newStudent: Student = {
       id: crypto.randomUUID(),
       classId: classData.id,
-      studentId: studentIdPrefix,
-      name: registration.name,
+      studentId: studentIdValue,
+      name: registration!.name,
       email: studentEmail,
     };
 
@@ -62,15 +62,19 @@ export function JoinClass({ studentEmail, onJoinSuccess }: JoinClassProps) {
     // Update student registration with class ID
     storage.addClassToStudentRegistration(studentEmail, classData.id);
 
-    // Update student account with first class ID (for login)
+    // Update or create student account with class ID (for login)
     const accounts = storage.getStudentAccounts();
-    const accountEntry = Object.entries(accounts).find(([_, acc]) => acc.studentId === studentIdPrefix);
+    const accountEntry = Object.entries(accounts).find(([_, acc]) => acc.studentId === studentIdValue);
     
     if (accountEntry) {
       const [accountStudentId, accountData] = accountEntry;
       if (!accountData.classId) {
         storage.saveStudentAccount(accountStudentId, accountData.password, classData.id);
       }
+    } else {
+      // If no account exists (edge case), create it using registration password if available
+      const password = (registration && (registration as any).password) ? (registration as any).password : '';
+      storage.saveStudentAccount(studentIdValue, password, classData.id);
     }
 
     setSuccess(true);

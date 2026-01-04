@@ -3,6 +3,7 @@ import { Teacher, Class } from '../types';
 import { storage } from '../utils/storage';
 import { calculateClassAnalytics } from '../utils/analytics';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { OfflineToggle } from './OfflineToggle';
 import { Button } from './ui/button';
 import { Plus, Users, BookOpen, TrendingUp, LogOut } from 'lucide-react';
 
@@ -34,10 +35,13 @@ export function Dashboard({ teacher, onLogout, onNavigate }: DashboardProps) {
               <h1>Think Tank</h1>
               <p className="text-muted-foreground">Welcome back, {teacher.name}</p>
             </div>
-            <Button variant="outline" onClick={onLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-3">
+              <OfflineToggle />
+              <Button variant="outline" onClick={onLogout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>

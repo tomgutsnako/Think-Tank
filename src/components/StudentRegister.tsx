@@ -57,11 +57,12 @@ export function StudentRegister({ onBack, onRegisterSuccess }: StudentRegisterPr
       return;
     }
 
-    // Create new student registration
+    // Create new student registration (include provided studentId)
     const registration = {
       id: crypto.randomUUID(),
       name: formData.name,
       email: formData.email,
+      studentId: formData.studentId,
       password: formData.password,
       classIds: [],
     };
@@ -70,6 +71,24 @@ export function StudentRegister({ onBack, onRegisterSuccess }: StudentRegisterPr
 
     // Create student account for login (initially without a class)
     storage.saveStudentAccount(formData.studentId, formData.password, '');
+
+    // Save last-registered credentials so Login page can autofill
+    try {
+      storage.setLastRegistered({ studentId: formData.studentId, email: formData.email, password: formData.password });
+    } catch (e) {
+      // ignore
+    }
+
+    // Try storing credentials using the Web Credential Management API (if available)
+    try {
+      const nav: any = navigator as any;
+      if (nav.credentials && (window as any).PasswordCredential) {
+        const cred = new (window as any).PasswordCredential({ id: formData.studentId || formData.email, password: formData.password, name: formData.name });
+        nav.credentials.store(cred).catch(() => { /* ignore */ });
+      }
+    } catch (e) {
+      // ignore if API not available or fails
+    }
 
     // Redirect to join class flow
     onRegisterSuccess(formData.email);
